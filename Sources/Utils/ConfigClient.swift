@@ -28,7 +28,7 @@ public final class ConfigClient {
   public var onRefreshWithChanges = [() -> Void]()
   public var values = [String: Any]()
 
-  private let remoteUrl: URL
+  private let remoteUrl: URL?
   private var task: URLSessionDataTask?
 
   /**
@@ -36,7 +36,7 @@ public final class ConfigClient {
      - localUrl: A URL to the config file in a local directory
      - remoteUrl: The full URL to the endpoint that returns the config data
   */
-  public init(localUrl: URL, remoteUrl: URL) throws {
+  public init(localUrl: URL, remoteUrl: URL?) throws {
     self.remoteUrl = remoteUrl
     let data = try Data(contentsOf: localUrl)
     processData(data: data)
@@ -99,9 +99,14 @@ public final class ConfigClient {
 
   private func pingForChanges() {
 
+    guard let remoteUrl = remoteUrl else {
+      print("Remote URL not available")
+      return
+    }
+
     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: {
       let request = URLRequest(
-        url: self.remoteUrl,
+        url: remoteUrl,
         cachePolicy: URLRequest.CachePolicy.reloadIgnoringLocalCacheData,
         timeoutInterval: 10.0
       )
