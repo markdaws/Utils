@@ -24,10 +24,19 @@ import Foundation
 */
 public final class ConfigClient {
 
-  public var onValueChanged = [(key: String, value: Any) -> Void]()
   public var onRefreshWithChanges = [() -> Void]()
   public var values = [String: Any]()
+  public typealias Listener = (String, Any) -> Void
 
+  public class Subscription {
+    let listener: Listener
+
+    init(listener: @escaping Listener) {
+      self.listener = listener
+    }
+  }
+
+  private var onValueChanged = [Subscription]()
   private let remoteUrl: URL?
   private var task: URLSessionDataTask?
 
@@ -40,6 +49,26 @@ public final class ConfigClient {
     self.remoteUrl = remoteUrl
     let data = try Data(contentsOf: localUrl)
     processData(data: data)
+  }
+
+  public func addListener(_ listener: @escaping Listener) -> Subscription {
+    let sub = Subscription(listener: listener)
+    onValueChanged.append(sub)
+    return sub
+  }
+
+  public func removeListener(_ subscription: Subscription?) {
+    guard let subscription = subscription else {
+      return
+    }
+
+    guard let index = onValueChanged.firstIndex(where: { sub -> Bool in
+      return sub === subscription
+    }) else {
+      return
+    }
+
+    _ = onValueChanged.remove(at: index)
   }
 
   /**
@@ -75,8 +104,8 @@ public final class ConfigClient {
 
           if didChange {
             print("\(key): \(String(describing: jsonSerialized[key]))")
-            self.onValueChanged.forEach { callback in
-              callback(key, jsonSerialized[key]!)
+            self.onValueChanged.forEach { subscription in
+              subscription.listener(key, jsonSerialized[key]!)
             }
             hadChanges = true
           }
