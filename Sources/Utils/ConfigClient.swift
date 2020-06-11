@@ -25,6 +25,10 @@ import Swifter
 */
 public final class ConfigClient {
 
+  enum Errors: Error {
+    case noIPAddr
+  }
+
   public var onRefreshWithChanges = [() -> Void]()
   public var values = [String: Any]()
   public typealias Listener = (String, Any) -> Void
@@ -86,15 +90,26 @@ public final class ConfigClient {
    specific actions in their app.
    */
   public func startServer(port: UInt16, onRequest: @escaping (HttpRequest) -> Void) -> Error? {
-    server.listenAddressIPv4 = ConfigClient.getIPAddress()
+    guard let ipAddr = ConfigClient.getIPAddress() else {
+      print("Unable to determine IP address")
+      return Errors.noIPAddr
+    }
+
+    let isIpv6 = ipAddr.contains(":")
+    if isIpv6 {
+      server.listenAddressIPv6 = ipAddr
+    } else {
+      server.listenAddressIPv4 = ipAddr
+    }
+
     server["/command"] = { request in
       onRequest(request)
       return .ok(.htmlBody("OK"))
     }
 
     do {
-      try server.start(port, forceIPv4: false, priority: DispatchQoS.QoSClass.background)
-      print("Started local config server on: \(String(describing: server.listenAddressIPv4)):\(port)")
+      try server.start(port, forceIPv4: !isIpv6, priority: DispatchQoS.QoSClass.background)
+      print("Started local config server on: \(String(describing: ipAddr)):\(port)")
       return nil
     } catch {
       return error
