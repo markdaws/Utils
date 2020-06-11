@@ -3,6 +3,7 @@
 //
 
 import Foundation
+import Swifter
 
 /**
  A common scenario when developing an app is changing config values, such
@@ -39,6 +40,7 @@ public final class ConfigClient {
   private var onValueChanged = [Subscription]()
   private let remoteUrl: URL?
   private var task: URLSessionDataTask?
+  private let server = HttpServer()
 
   /**
    - parameters:
@@ -79,6 +81,60 @@ public final class ConfigClient {
     pingForChanges()
   }
 
+  /**
+   Starts  a HTTP server, callers can then respond to requests and perform
+   specific actions in their app.
+   */
+  public func startServer(port: UInt16, onRequest: @escaping (HttpRequest) -> Void) -> Error? {
+    server.listenAddressIPv4 = ConfigClient.getIPAddress()
+    server["/command"] = { request in
+      onRequest(request)
+      return .ok(.htmlBody("OK"))
+    }
+
+    do {
+      try server.start(port, forceIPv4: false, priority: DispatchQoS.QoSClass.background)
+      print("Started local config server on: \(String(describing: server.listenAddressIPv4)):\(port)")
+      return nil
+    } catch {
+      return error
+    }
+  }
+
+  public func stopServer() {
+    server.stop()
+  }
+
+  public class func getIPAddress() -> String? {
+    var address: String?
+    var ifaddr: UnsafeMutablePointer<ifaddrs>?
+    if getifaddrs(&ifaddr) == 0 {
+      var ptr = ifaddr
+      while ptr != nil {
+        defer { ptr = ptr?.pointee.ifa_next }
+        let interface = ptr?.pointee
+        let addrFamily = interface?.ifa_addr.pointee.sa_family
+        if addrFamily == UInt8(AF_INET) || addrFamily == UInt8(AF_INET6),
+          let cString = interface?.ifa_name,
+          String(cString: cString) == "en0",
+          let saLen = (interface?.ifa_addr.pointee.sa_len) {
+          var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+          let ifaAddr = interface?.ifa_addr
+          getnameinfo(ifaAddr,
+                      socklen_t(saLen),
+                      &hostname,
+                      socklen_t(hostname.count),
+                      nil,
+                      socklen_t(0),
+                      NI_NUMERICHOST)
+          address = String(cString: hostname)
+        }
+      }
+      freeifaddrs(ifaddr)
+    }
+    return address
+  }
+
   private func processData(data: Data) {
     do {
       if let jsonSerialized = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
@@ -98,6 +154,9 @@ public final class ConfigClient {
             }
             if key.starts(with: "Bool:") {
               didChange = (self.values[key] as! Bool) != (jsonSerialized[key] as! Bool)
+            }
+            if key.starts(with: "String:") {
+              didChange = (self.values[key] as! String) != (jsonSerialized[key] as! String)
             }
             self.values[key] = jsonSerialized[key]
           }
