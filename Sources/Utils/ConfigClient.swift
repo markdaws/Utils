@@ -167,6 +167,9 @@ public final class ConfigClient {
             if key.starts(with: "Double:") {
               didChange = (self.values[key] as! Double) != (jsonSerialized[key] as! Double)
             }
+            if key.starts(with: "[Double]:") {
+              didChange = (self.values[key] as! [Double]) != (jsonSerialized[key] as! [Double])
+            }
             if key.starts(with: "Bool:") {
               didChange = (self.values[key] as! Bool) != (jsonSerialized[key] as! Bool)
             }
