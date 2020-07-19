@@ -11,7 +11,7 @@ import UIKit
 extension UIColor {
 
   /// Returns a random color
-  static func random() -> UIColor {
+  public static func random() -> UIColor {
     return UIColor(
       red: CGFloat.random(in: 0...1),
       green: CGFloat.random(in: 0...1),
