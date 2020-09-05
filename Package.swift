@@ -16,7 +16,7 @@ let package = Package(
             targets: ["Utils"]),
     ],
     dependencies: [
-      .package(url: "https://github.com/markdaws/swifter.git", .revision("ca7a1ec09864be922352a2451a43434d5802de11"))
+      .package(url: "https://github.com/httpswift/swifter", .upToNextMajor(from: "1.4.7"))
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.

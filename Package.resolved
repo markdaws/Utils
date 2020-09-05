@@ -3,11 +3,11 @@
     "pins": [
       {
         "package": "Swifter",
-        "repositoryURL": "https://github.com/markdaws/swifter.git",
+        "repositoryURL": "https://github.com/httpswift/swifter",
         "state": {
           "branch": null,
-          "revision": "ca7a1ec09864be922352a2451a43434d5802de11",
-          "version": null
+          "revision": "8b5afb48ae64d4f729f0489ddcfe09c62b9c3687",
+          "version": "1.4.7"
         }
       }
     ]
